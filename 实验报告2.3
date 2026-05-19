@@ -1,0 +1,499 @@
+# 2.3 构建Android CameraX应用实验报告
+
+## 一、实验目的
+
+1. 学习使用Android CameraX库进行相机应用开发
+2. 掌握Kotlin语言在Android开发中的应用
+3. 理解ViewBinding视图绑定技术
+4. 实现相机预览、拍照和录像功能
+5. 掌握Android运行时权限的申请和管理
+
+## 二、实验环境
+
+### 2.1 硬件环境
+- 开发计算机
+- Android测试设备（或模拟器）
+- 支持相机的移动设备
+
+### 2.2 软件环境
+- Android Studio
+- Kotlin编程语言
+- Android SDK（最低API Level 24）
+- CameraX库（版本1.3.0）
+
+### 2.3 项目配置
+```
+最低SDK版本：API 24 (Android 7.0)
+目标SDK版本：API 36
+编程语言：Kotlin
+构建工具：Gradle
+视图绑定：ViewBinding
+```
+
+## 三、实验内容
+
+### 3.1 项目结构
+```
+CameraXTest/
+├── app/
+│   ├── src/main/
+│   │   ├── AndroidManifest.xml
+│   │   ├── java/com/example/cameraxtest/
+│   │   │   └── MainActivity.kt
+│   │   └── res/
+│   │       ├── layout/
+│   │       │   └── activity_main.xml
+│   │       └── values/
+│   │           ├── colors.xml
+│   │           ├── strings.xml
+│   │           └── themes.xml
+│   └── build.gradle.kts
+└── build.gradle.kts
+```
+
+### 3.2 核心功能
+1. **相机预览**：使用PreviewView显示实时相机画面
+2. **拍照功能**：点击按钮拍照并保存到相册
+3. **录像功能**：支持开始/停止录像，带音频录制
+4. **权限管理**：动态申请相机和录音权限
+
+## 四、实验步骤
+
+### 4.1 配置项目依赖
+
+在 [app/build.gradle.kts](file:///E:/AS%20Projects/CameraXTest/app/build.gradle.kts) 中添加CameraX相关依赖：
+
+```kotlin
+val camerax_version = "1.3.0"
+
+dependencies {
+    // CameraX核心库
+    implementation("androidx.camera:camera-core:$camerax_version")
+    implementation("androidx.camera:camera-camera2:$camerax_version")
+    implementation("androidx.camera:camera-lifecycle:$camerax_version")
+    implementation("androidx.camera:camera-video:$camerax_version")
+    
+    // CameraX View (PreviewView)
+    implementation("androidx.camera:camera-view:$camerax_version")
+    
+    // AppCompat和Material库
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("com.google.android.material:material:1.12.0")
+    
+    // ConstraintLayout
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+}
+```
+
+启用ViewBinding：
+```kotlin
+buildFeatures {
+    viewBinding = true
+}
+```
+
+### 4.2 配置权限
+
+在 [AndroidManifest.xml](file:///E:/AS%20Projects/CameraXTest/app/src/main/AndroidManifest.xml) 中添加所需权限：
+
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+    android:maxSdkVersion="28" />
+
+<uses-feature android:name="android.hardware.camera"
+    android:required="true" />
+```
+
+### 4.3 设计布局文件
+
+在 [activity_main.xml](file:///E:/AS%20Projects/CameraXTest/app/src/main/res/layout/activity_main.xml) 中创建界面：
+
+```xml
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- 相机预览画面 -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/viewFinder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- 拍照按钮 -->
+    <Button
+        android:id="@+id/imageCaptureButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="拍照"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginBottom="50dp"
+        android:layout_marginStart="50dp" />
+
+    <!-- 录像按钮 -->
+    <Button
+        android:id="@+id/videoCaptureButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="录像"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="50dp"
+        android:layout_marginEnd="50dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+```
+
+### 4.4 配置主题
+
+在 [themes.xml](file:///E:/AS%20Projects/CameraXTest/app/src/main/res/values/themes.xml) 中设置AppCompat主题：
+
+```xml
+<style name="Theme.CameraXTest" parent="Theme.AppCompat.Light.NoActionBar">
+    <item name="colorPrimary">@color/purple_500</item>
+    <item name="colorPrimaryDark">@color/purple_700</item>
+    <item name="colorAccent">@color/teal_200</item>
+</style>
+```
+
+### 4.5 实现MainActivity
+
+在 [MainActivity.kt](file:///E:/AS%20Projects/CameraXTest/app/src/main/java/com/example/cameraxtest/MainActivity.kt) 中实现核心逻辑：
+
+#### 4.5.1 成员变量定义
+```kotlin
+class MainActivity : AppCompatActivity() {
+    private lateinit var viewBinding: ActivityMainBinding
+    private var imageCapture: ImageCapture? = null
+    private var videoCapture: VideoCapture<Recorder>? = null
+    private var recording: Recording? = null
+    private lateinit var cameraExecutor: ExecutorService
+    
+    companion object {
+        private const val REQUEST_CODE_PERMISSIONS = 10
+        private val REQUIRED_PERMISSIONS = mutableListOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
+        ).apply {
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        }.toTypedArray()
+    }
+}
+```
+
+#### 4.5.2 权限请求
+```kotlin
+private val permissionLauncher = registerForActivityResult(
+    ActivityResultContracts.RequestMultiplePermissions()
+) { permissions ->
+    if (permissions.all { it.value }) {
+        startCamera()
+    } else {
+        Toast.makeText(
+            this,
+            "权限未授予，无法使用相机功能",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+}
+
+private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+    ContextCompat.checkSelfPermission(
+        baseContext, it
+    ) == PackageManager.PERMISSION_GRANTED
+}
+```
+
+#### 4.5.3 初始化相机
+```kotlin
+private fun startCamera() {
+    val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+    
+    cameraProviderFuture.addListener({
+        val cameraProvider = cameraProviderFuture.get()
+        
+        val preview = Preview.Builder()
+            .build()
+            .also {
+                it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
+            }
+        
+        val imageCaptureBuilder = ImageCapture.Builder()
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+        imageCapture = imageCaptureBuilder.build()
+        
+        val recorder = Recorder.Builder()
+            .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
+            .build()
+        videoCapture = VideoCapture.withOutput(recorder)
+        
+        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+        
+        try {
+            cameraProvider.unbindAll()
+            cameraProvider.bindToLifecycle(
+                this,
+                cameraSelector,
+                preview,
+                imageCapture,
+                videoCapture
+            )
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                "相机启动失败: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }, ContextCompat.getMainExecutor(this))
+}
+```
+
+#### 4.5.4 拍照功能
+```kotlin
+private fun takePhoto() {
+    val imageCapture = imageCapture ?: return
+    
+    val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US)
+        .format(System.currentTimeMillis())
+    
+    val contentValues = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
+        }
+    }
+    
+    val outputOptions = ImageCapture.OutputFileOptions.Builder(
+        contentResolver,
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        contentValues
+    ).build()
+    
+    imageCapture.takePicture(
+        outputOptions,
+        ContextCompat.getMainExecutor(this),
+        object : ImageCapture.OnImageSavedCallback {
+            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                val msg = "照片已保存: ${output.savedUri}"
+                Toast.makeText(
+                    this@MainActivity,
+                    msg,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            
+            override fun onError(exception: ImageCaptureException) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "拍照失败: ${exception.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    )
+}
+```
+
+#### 4.5.5 录像功能
+```kotlin
+private fun captureVideo() {
+    val videoCapture = this.videoCapture ?: return
+    
+    val curRecording = recording
+    if (curRecording != null) {
+        curRecording.stop()
+        recording = null
+        viewBinding.videoCaptureButton.text = "录像"
+        return
+    }
+    
+    val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US)
+        .format(System.currentTimeMillis())
+    
+    val contentValues = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+        put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/CameraX-Video")
+        }
+    }
+    
+    val mediaStoreOutputOptions = MediaStoreOutputOptions.Builder(
+        contentResolver,
+        MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+    )
+        .setContentValues(contentValues)
+        .build()
+    
+    recording = videoCapture.output
+        .prepareRecording(this, mediaStoreOutputOptions)
+        .apply {
+            if (ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                withAudioEnabled()
+            }
+        }
+        .start(ContextCompat.getMainExecutor(this)) { recordEvent ->
+            when (recordEvent) {
+                is VideoRecordEvent.Start -> {
+                    viewBinding.videoCaptureButton.text = "停止"
+                }
+                is VideoRecordEvent.Finalize -> {
+                    if (!recordEvent.hasError()) {
+                        val msg = "视频已保存: ${recordEvent.outputResults.outputUri}"
+                        Toast.makeText(
+                            this,
+                            msg,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        recording?.close()
+                        recording = null
+                        Toast.makeText(
+                            this,
+                            "视频录制失败: ${recordEvent.error}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    viewBinding.videoCaptureButton.text = "录像"
+                }
+            }
+        }
+}
+```
+
+## 五、实验结果
+
+### 5.1 功能测试结果
+
+| 测试项 | 测试结果 | 说明 |
+|--------|----------|------|
+| 应用启动 | ✅ 通过 | 正常启动并显示相机预览 |
+| 相机预览 | ✅ 通过 | 显示实时画面 |
+| 拍照功能 | ✅ 通过 | 成功拍照并保存到相册 |
+| 录像功能 | ✅ 通过 | 成功录制视频并保存 |
+| 权限申请 | ✅ 通过 | 正确请求相机和录音权限 |
+| 界面显示 | ✅ 通过 | 按钮位置正确，布局美观 |
+
+### 5.2 文件保存位置
+- 照片：`Pictures/CameraX-Image/`
+- 视频：`Movies/CameraX-Video/`
+- 文件名格式：`yyyy-MM-dd-HH-mm-ss-SSS`
+
+## 六、遇到的问题及解决方法
+
+### 6.1 问题1：Compose依赖冲突
+
+**问题描述**：
+- 原始项目使用Jetpack Compose，但需求要求使用ViewBinding
+- 出现 `Unresolved reference: compose` 错误
+
+**解决方法**：
+1. 从根目录 `build.gradle.kts` 移除 `kotlin.compose` 插件
+2. 从 `libs.versions.toml` 移除Compose相关依赖
+3. 删除Compose主题文件
+4. 配置ViewBinding启用
+
+### 6.2 问题2：缺少AppCompat依赖
+
+**问题描述**：
+- 编译错误：`Unresolved reference 'AppCompatActivity'`
+- 缺少AndroidX AppCompat库
+
+**解决方法**：
+在 `app/build.gradle.kts` 中添加：
+```kotlin
+implementation("androidx.appcompat:appcompat:1.7.0")
+implementation("com.google.android.material:material:1.12.0")
+```
+
+### 6.3 问题3：surfaceProvider属性访问错误
+
+**问题描述**：
+- 编译错误：`Unresolved reference 'surfaceProvider'`
+- 属性赋值方式不正确
+
+**解决方法**：
+将 `it.surfaceProvider = viewBinding.viewFinder.surfaceProvider`
+改为 `it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)`
+
+### 6.4 问题4：主题不匹配
+
+**问题描述**：
+- 运行时崩溃：`You need to use a Theme.AppCompat theme (or descendant)`
+- 应用主题不是AppCompat子类
+
+**解决方法**：
+修改 `themes.xml`，将父主题改为：
+```xml
+<style name="Theme.CameraXTest" parent="Theme.AppCompat.Light.NoActionBar">
+```
+
+### 6.5 问题5：16KB页面大小警告
+
+**问题描述**：
+- 在Android Go设备上出现兼容性警告
+- 提示" This app isn't 16 KB compatible"
+
+**解决方法**：
+在 `app/build.gradle.kts` 中添加：
+```kotlin
+packagingOptions {
+    jniLibs {
+        useLegacyPackaging = true
+    }
+}
+```
+
+## 七、实验总结
+
+### 7.1 实验收获
+1. **CameraX技术掌握**：深入理解了CameraX库的架构和使用方法，包括Preview、ImageCapture、VideoCapture等核心组件。
+
+2. **Kotlin语言实践**：熟练掌握了Kotlin在Android开发中的应用，包括lambda表达式、空安全、扩展函数等特性。
+
+3. **ViewBinding使用**：掌握了ViewBinding视图绑定技术，相比findViewById更加安全高效。
+
+4. **权限管理**：学会了Android运行时权限的申请和管理，理解了不同Android版本的权限差异。
+
+5. **MediaStore使用**：掌握了使用MediaStore保存媒体文件到系统相册的方法。
+
+6. **问题解决能力**：通过解决多个编译和运行时错误，提升了调试和问题排查能力。
+
+### 7.2 CameraX的优势
+1. **生命周期感知**：自动处理相机生命周期，避免资源泄漏
+2. **向后兼容**：支持API 21+设备，无需处理不同Android版本的兼容问题
+3. **用例设计**：Preview、ImageCapture、VideoCapture等用例独立配置，灵活组合
+4. **简洁API**：相比Camera2 API更加简洁易用
+
+### 7.3 改进方向
+1. 添加前后摄像头切换功能
+2. 实现闪光灯控制
+3. 添加拍照预览功能
+4. 支持更多视频质量选择
+5. 添加图片缩放和对焦功能
+
+## 八、参考文献
+
+1. Android官方文档：https://developer.android.com/training/camerax
+2. CameraX开发指南：https://developer.android.com/codelabs/camerax-getting-started
+3. Kotlin Android开发：https://developer.android.com/kotlin
+4. ViewBinding文档：https://developer.android.com/topic/libraries/view-binding
+
+---
+
+**实验日期**：2026年5月
+**实验者**：陈润扬
+**班级**：[班级名称]
+**学号**：[学号]
