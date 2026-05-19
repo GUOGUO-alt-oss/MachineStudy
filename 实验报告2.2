@@ -1,0 +1,492 @@
+# 实验报告 2.2：构建 Kotlin 应用并使用 Compose 布局
+
+---
+
+## 一、实验目的
+
+1. 掌握使用 Kotlin 语言开发 Android 的基本流程
+2. 掌握 Android Compose 布局的基本用法
+3. 进一步熟悉 Kotlin 语言的特性
+
+---
+
+## 二、实验环境
+
+- **开发工具**：Android Studio
+- **编程语言**：Kotlin
+- **最低 API Level**：21（Compose 支持的最低版本）
+- **项目模板**：Empty Activity
+- **UI 框架**：Jetpack Compose
+
+---
+
+## 三、实验内容
+
+本次实验包含三个主要任务：
+
+1. **任务一**：按照教程完成首个 Kotlin APP 的构建
+2. **任务二**：按照教程完成 Compose 布局的实践
+3. **任务三**：完成面向 AI 应用的 Compose 布局
+
+---
+
+## 四、任务一：创建首个 Kotlin 应用
+
+### 4.1 项目创建
+
+1. 打开 Android Studio，选择 **New Project**
+2. 在 **Phone and Tablet** 选项卡中选择 **Empty Activity**
+3. 将应用命名为 **MyFirstKotlinApp**
+4. 选择 Kotlin 作为编程语言
+5. 设置最小支持 API Level 为 21
+6. 点击 **Finish** 完成项目创建
+
+### 4.2 核心代码解析
+
+#### MainActivity.kt
+
+```kotlin
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()  // 开启沉浸式状态栏与导航栏模式
+        setContent {
+            MyFirstKotlinAppTheme {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Greeting(
+                        name = "Android",
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(
+        text = "Hello $name!",
+        modifier = modifier
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    MyFirstKotlinAppTheme {
+        Greeting("Android")
+    }
+}
+```
+
+### 4.3 关键知识点
+
+| 组件/概念 | 说明 |
+|-----------|------|
+| `@Composable` | 标记可组合函数，用于构建 UI |
+| `@Preview` | 在 Android Studio 中预览可组合函数，无需运行应用 |
+| `setContent` | Jetpack Compose 的入口，替代传统的 `setContentView` |
+| `Scaffold` | 结构性布局容器，提供基础的页面结构 |
+| `enableEdgeToEdge()` | 开启沉浸式状态栏与导航栏模式 |
+| `Theme` | 应用主题，定义颜色、字体、形状等 |
+
+### 4.4 实验结果
+
+成功创建并运行了首个基于 Kotlin 和 Jetpack Compose 的 Android 应用，界面显示 "Hello Android!"。通过 `@Preview` 注解可以在 Android Studio 中实时预览 UI 效果。
+
+---
+
+## 五、任务二：实践 Compose 布局
+
+### 5.1 项目创建
+
+创建新项目 **BasicsCodelab**，选择 Empty Activity 模板。
+
+### 5.2 界面微调 - 使用 Surface
+
+使用 `Surface` 组件为文本添加背景色：
+
+```kotlin
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Surface(color = MaterialTheme.colorScheme.primary) {
+        Text(
+            text = "Hello $name!",
+            modifier = modifier
+        )
+    }
+}
+```
+
+**效果**：文本显示在主题主色背景上，文字自动变为白色（Material 组件的智能配色功能）。
+
+### 5.3 使用修饰符（Modifier）
+
+添加内边距修饰符：
+
+```kotlin
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Surface(color = MaterialTheme.colorScheme.primary) {
+        Text(
+            text = "Hello $name!",
+            modifier = modifier.padding(24.dp)
+        )
+    }
+}
+```
+
+### 5.4 创建可复用组件
+
+创建 `MyApp` 可组合项来组织页面结构：
+
+```kotlin
+@Composable
+fun MyApp(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Greeting("Android")
+    }
+}
+```
+
+### 5.5 使用 Column 和 Row 布局
+
+Compose 的三个基本标准布局元素：
+- **Column**：垂直排列子元素
+- **Row**：水平排列子元素
+- **Box**：层叠排列子元素
+
+#### 使用 Column 实现垂直布局：
+
+```kotlin
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Surface(color = MaterialTheme.colorScheme.primary) {
+        Column(modifier = modifier.padding(24.dp)) {
+            Text(text = "Hello ")
+            Text(text = name)
+        }
+    }
+}
+```
+
+#### 使用循环创建多个列表项：
+
+```kotlin
+@Composable
+fun MyApp(
+    modifier: Modifier = Modifier,
+    names: List<String> = listOf("World", "Compose")
+) {
+    Column(modifier) {
+        for (name in names) {
+            Greeting(name = name)
+        }
+    }
+}
+```
+
+#### 添加填充和边距：
+
+```kotlin
+@Composable
+fun MyApp(
+    modifier: Modifier = Modifier,
+    names: List<String> = listOf("World", "Compose")
+) {
+    Column(modifier = modifier.padding(vertical = 4.dp)) {
+        for (name in names) {
+            Greeting(name = name)
+        }
+    }
+}
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+            Text(text = "Hello ")
+            Text(text = name)
+        }
+    }
+}
+```
+
+### 5.6 添加按钮
+
+使用 `ElevatedButton` 添加可点击按钮：
+
+```kotlin
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.ElevatedButton
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+    ) {
+        Row(modifier = Modifier.padding(24.dp)) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "Hello ")
+                Text(text = name)
+            }
+            ElevatedButton(
+                onClick = { /* TODO */ }
+            ) {
+                Text("Show more")
+            }
+        }
+    }
+}
+```
+
+**关键概念**：
+- `weight(1f)`：让元素填满所有可用空间，具有弹性
+- `ElevatedButton`：Material3 提供的带阴影效果的按钮
+
+### 5.7 使用 State 实现交互
+
+使用 `remember` 和 `mutableStateOf` 管理组件状态：
+
+```kotlin
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    val expanded = remember { mutableStateOf(false) }
+    val extraPadding = if (expanded.value) 48.dp else 0.dp
+    
+    Surface(
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+    ) {
+        Row(modifier = Modifier.padding(24.dp)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(bottom = extraPadding)
+            ) {
+                Text(text = "Hello ")
+                Text(text = name)
+            }
+            ElevatedButton(
+                onClick = { expanded.value = !expanded.value }
+            ) {
+                Text(if (expanded.value) "Show less" else "Show more")
+            }
+        }
+    }
+}
+```
+
+**关键概念**：
+- `mutableStateOf`：创建可观察的可变状态对象
+- `remember`：在重组后保留状态值
+- 状态变化会自动触发 UI 重组（Recomposition）
+
+### 5.8 实验结果
+
+成功实现了可交互的列表界面，每个列表项包含：
+- 问候文本（垂直排列）
+- "Show more/Show less" 按钮
+- 点击按钮可展开/收起内容
+
+---
+
+## 六、任务三：面向 AI 应用的 Compose 布局
+
+### 6.1 界面设计需求
+
+设计一个面向 AI 应用的界面，包含以下区域：
+
+| 区域 | 功能说明 |
+|------|----------|
+| **顶部栏** | 显示应用标题与操作入口 |
+| **预览区** | 后续可替换为 CameraX 相机预览 |
+| **结果区** | 显示模型名称、识别结果、置信度、推理时间 |
+| **按钮区** | 支持拍照识别、相册导入、切换模型、清空结果 |
+
+### 6.2 布局实现方案
+
+```kotlin
+@Composable
+fun AIAppLayout() {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // 顶部栏
+        TopAppBar(
+            title = { Text("AI 图像识别") },
+            actions = {
+                IconButton(onClick = { /* 设置 */ }) {
+                    Icon(Icons.Default.Settings, contentDescription = "设置")
+                }
+            }
+        )
+        
+        // 预览区（使用 Box 占位）
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(16.dp)
+                .background(Color.Gray),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("相机预览区域", color = Color.White)
+        }
+        
+        // 结果区（使用 Card + Column）
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            elevation = CardDefaults.cardElevation(4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("模型: MobileNetV2", style = MaterialTheme.typography.bodyLarge)
+                Text("识别结果: 猫", style = MaterialTheme.typography.headlineMedium)
+                Text("置信度: 95.3%", style = MaterialTheme.typography.bodyMedium)
+                Text("推理时间: 45ms", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        
+        // 按钮区（使用 Row/Column 排列）
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Button(onClick = { /* 拍照 */ }) {
+                Text("拍照识别")
+            }
+            Button(onClick = { /* 相册 */ }) {
+                Text("相册导入")
+            }
+        }
+        
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            OutlinedButton(onClick = { /* 切换模型 */ }) {
+                Text("切换模型")
+            }
+            OutlinedButton(onClick = { /* 清空结果 */ }) {
+                Text("清空结果")
+            }
+        }
+    }
+}
+```
+
+### 6.3 布局结构说明
+
+```
+┌─────────────────────────────┐
+│         顶部栏 (TopAppBar)     │
+├─────────────────────────────┤
+│                             │
+│      预览区 (Box)            │
+│    （CameraX 占位）          │
+│                             │
+├─────────────────────────────┤
+│  ┌───────────────────────┐  │
+│  │   结果区 (Card)        │  │
+│  │  - 模型名称            │  │
+│  │  - 识别结果            │  │
+│  │  - 置信度              │  │
+│  │  - 推理时间            │  │
+│  └───────────────────────┘  │
+├─────────────────────────────┤
+│  [拍照识别]    [相册导入]    │
+├─────────────────────────────┤
+│  [切换模型]    [清空结果]    │
+└─────────────────────────────┘
+```
+
+### 6.4 使用的 Compose 组件
+
+| 组件 | 用途 |
+|------|------|
+| `Column` | 垂直排列页面主要区域 |
+| `TopAppBar` | 顶部应用栏，显示标题和操作按钮 |
+| `Box` | 相机预览占位区域 |
+| `Card` | 结果展示卡片，带阴影效果 |
+| `Row` | 水平排列按钮 |
+| `Button` | 主要操作按钮 |
+| `OutlinedButton` | 次要操作按钮（边框样式） |
+| `IconButton` | 图标按钮（设置入口） |
+
+---
+
+## 七、实验总结
+
+### 7.1 主要收获
+
+1. **Kotlin 语言特性**
+   - 熟悉了 Kotlin 的语法和特性
+   - 理解了 DSL（领域特定语言）在 Compose 中的应用
+   - 掌握了 Lambda 表达式的使用
+
+2. **Jetpack Compose 基础**
+   - 理解了声明式 UI 的开发模式
+   - 掌握了 `@Composable` 和 `@Preview` 注解的使用
+   - 学会了使用 `setContent` 替代传统的 XML 布局
+
+3. **Compose 布局系统**
+   - 掌握了 `Column`、`Row`、`Box` 三大基础布局
+   - 学会了使用 `Modifier` 进行界面修饰
+   - 理解了 `Surface`、`Card`、`Scaffold` 等 Material 组件
+
+4. **状态管理**
+   - 理解了 Compose 的状态管理机制
+   - 掌握了 `remember` 和 `mutableStateOf` 的使用
+   - 理解了重组（Recomposition）的概念
+
+5. **组件复用**
+   - 学会了创建可复用的可组合函数
+   - 理解了 Modifier 参数传递的最佳实践
+
+### 7.2 遇到的问题与解决方案
+
+| 问题 | 解决方案 |
+|------|----------|
+| 预览不显示 | 确保 `@Preview` 注解的函数无参数或使用默认参数 |
+| 状态不保存 | 使用 `remember` 包裹 `mutableStateOf` |
+| 布局排列错乱 | 正确使用 `Column`、`Row` 和 `weight` 修饰符 |
+
+### 7.3 代码仓库
+
+项目代码已上传至 GitHub：
+- 仓库地址：`https://github.com/GUOGUO-alt-oss/MachineStudy.git`
+- 分支：`Experience3`
+
+---
+
+## 八、参考文献
+
+1. [Android Kotlin+Compose首个应用 - CSDN](https://blog.csdn.net/llfjfz/article/details/147382990)
+2. [Android Jetpack Compose基础实践 - CSDN](https://blog.csdn.net/llfjfz/article/details/147394477)
+3. [Jetpack Compose 教程 - Android Developers](https://developer.android.com/develop/ui/compose/tutorial?hl=zh-cn)
+4. [Jetpack Compose 基础知识 - Android Developers](https://developer.android.com/codelabs/jetpack-compose-basics?hl=zh-cn#0)
+5. [Kotlin 官方文档](https://kotlinlang.org/docs/home.html)
+
+---
+
+**实验完成日期**：2026年5月19日
