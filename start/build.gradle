@@ -23,13 +23,13 @@ plugins {
 }
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 30
 
     defaultConfig {
         applicationId "org.tensorflow.lite.examples.classification"
         minSdkVersion 21
         //noinspection OldTargetApi
-        targetSdkVersion 29
+        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
 
@@ -55,6 +55,7 @@ android {
     // Enable data binding
     buildFeatures{
         dataBinding = true
+        mlModelBinding true
     }
 
 }
@@ -77,7 +78,17 @@ dependencies {
     implementation "androidx.camera:camera-view:1.0.0-alpha17"
     implementation "androidx.activity:activity-ktx:1.1.0"
 
+    // TensorFlow Lite dependencies
+    implementation 'org.tensorflow:tensorflow-lite-support:0.1.0'
+    implementation 'org.tensorflow:tensorflow-lite-metadata:0.1.0'
+    implementation "androidx.recyclerview:recyclerview:1.1.0"
+
     // TODO 5: Optional GPU Delegates
+    implementation('org.tensorflow:tensorflow-lite-gpu:2.3.0') {
+        // Exclude the TFLite core lib pulled by GPU delegate to avoid
+        // Model.Options classpath conflict with tensorflow-lite-support
+        exclude group: 'org.tensorflow', module: 'tensorflow-lite'
+    }
 
 
     testImplementation 'junit:junit:4.13'

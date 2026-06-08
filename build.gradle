@@ -19,6 +19,8 @@ buildscript {
     ext.kotlin_version = '1.3.72'
     repositories {
         google()
+        mavenCentral()
+        // JCenter is retired but still serves read-only artifacts needed by older TFLite versions
         jcenter()
     }
     dependencies {
@@ -34,6 +36,8 @@ buildscript {
 allprojects {
     repositories {
         google()
+        mavenCentral()
+        // JCenter retired but still serves read-only artifacts
         jcenter()
     }
 }

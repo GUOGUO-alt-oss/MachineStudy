@@ -34,3 +34,6 @@ proguard-project.txt
 
 # Mac specific ignore
 .DS_Store
+# WorkBuddy working files
+.workbuddy/
+CLAUDE.md
