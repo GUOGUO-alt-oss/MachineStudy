@@ -2,7 +2,15 @@
 
 ## 项目简介
 
-本项目是「智能图像分类APP」实验的完整实现，基于 Google 官方 TensorFlow Lite Codelab（[Recognize Flowers with TensorFlow Lite on Android](https://codelabs.developers.google.com/codelabs/recognize-flowers-with-tensorflow-on-android)）。应用利用 **CameraX** 实时获取手机摄像头画面，通过 **TensorFlow Lite** 预训练花卉识别模型进行推理，借助 **MVVM 架构**（ViewModel + LiveData + Data Binding）将 Top-3 分类结果实时展示在界面上，并支持 **GPU 硬件加速**。
+本项目是「实验4：实现智能图像分类APP」的完整实现，基于 Google 官方 TensorFlow Lite Codelab（[Recognize Flowers with TensorFlow Lite on Android](https://codelabs.developers.google.com/codelabs/recognize-flowers-with-tensorflow-on-android)），并深度参考了以下两份实验教学材料：
+
+| 材料 | 内容 | 作用 |
+|------|------|------|
+| 《实验4：实现智能图像分类APP》（8页） | 实验任务定义、步骤概要、扩展要求 | 明确实验产出目标 |
+| 《TFLClassify 智能图像分类APP 解析》（16页） | 架构原理、数据流、调试指南 | 深度理解技术细节 |
+| CSDN 中文教程 | 逐步骤操作指南 | 可执行代码参考 |
+
+应用利用 **CameraX** 实时获取手机摄像头画面，通过 **TensorFlow Lite** 预训练花卉识别模型进行推理，借助 **MVVM 架构**（ViewModel + LiveData + Data Binding）将 **Top-3 分类结果**（花卉类别 + 置信度百分比）实时展示在界面上，并支持 **GPU 硬件加速**。
 
 ---
 
@@ -16,6 +24,49 @@
 | Top-K 排序展示 | Top-3 花卉类别 + 置信度百分比，RecyclerView 动态刷新 |
 | GPU 加速 | 自动检测设备 GPU 兼容性，支持时启用 GPU Delegate，否则回退 CPU |
 | 代码上传 | GitHub 仓库 + 详细 README 文档 |
+
+---
+
+## 实验背景与核心概念
+
+### TensorFlow Lite
+
+TensorFlow Lite（TFLite）是 Google 为移动和嵌入式设备优化的轻量级深度学习推理框架，支持 Android、iOS、MCU 等平台。核心优势：
+
+- **设备端推理**：无需网络，数据不出设备，延迟低
+- **模型量化**：通过 int8/float16 量化大幅缩小模型体积（本实验模型约 13MB）
+- **硬件加速**：支持 GPU Delegate、NNAPI、Hexagon DSP 等
+- **ML Model Binding**：Android Studio 4.1+ 可直接导入 `.tflite` 模型，自动生成 Java/Kotlin 包装类
+
+### CameraX
+
+CameraX 是 Android Jetpack 的相机库，提供生命周期感知的相机 API，封装了 Camera2 的复杂性。本实验使用两个核心用例：
+
+| 用例 | 职责 | 线程 |
+|------|------|------|
+| **Preview** | 实时显示摄像头画面到 `PreviewView` | 自动管理 |
+| **ImageAnalysis** | 获取可分析图像帧（`ImageProxy`），送入 ML 模型 | 独立单线程池 |
+
+### MVVM 架构
+
+```
+Model (数据)           →  Recognition 数据类 + FlowerModel TFLite 模型
+     ↕
+ViewModel (状态管理)    →  RecognitionListViewModel + LiveData
+     ↕
+View (UI)              →  RecognitionAdapter + Data Binding + RecyclerView
+```
+
+ViewModel 通过 `LiveData` 与 View 解耦，屏幕旋转等配置变更不会丢失识别结果。
+
+### start 模块 vs finish 模块
+
+| 维度 | `start/` | `finish/` |
+|------|----------|-----------|
+| 定位 | **实验起点**（含 6 个 TODO 占位） | **官方参考实现**（代码已完整） |
+| 初始状态 | 推理代码为 `Random.nextFloat()` 假数据 | 完整的 TFLite 推理 + GPU 加速 |
+| ML Model Binding | 初始未启用（需手动配置） | 已配置 `mlModelBinding = true` |
+| 实验策略 | 先运行 finish 理解效果 → 回 start 补全 TODO → 逐项编译验证 | 作为对照组和参考 |
 
 ---
 
@@ -128,18 +179,26 @@ TFLClassify/
     └── ...                             # 与 start 结构相同，代码已完整
 ```
 
+> **提示**：ML Model Binding 构建时在 `start/build/generated/ml_source_out/` 自动生成 `FlowerModel.java`（约115行），暴露 `newInstance()` / `process()` / `Outputs` API。此文件由 Gradle 任务 `generateDebugMlModelClass` 自动处理，勿手动编辑。
+```
+
 ---
 
 ## 快速开始
 
-### 1. 克隆代码
+### 1. 获取代码
 
 ```bash
+# 方式一：从本仓库克隆 Experience6 分支
+git clone -b Experience6 https://github.com/GUOGUO-alt-oss/MachineStudy.git
+cd MachineStudy
+
+# 方式二：从原始 Codelab 仓库克隆
 git clone https://github.com/hoitab/TFLClassify.git
 cd TFLClassify
 ```
 
-或直接使用本仓库的 `start` 模块（已包含完成后的代码）。
+本仓库的 `start` 模块已包含全部 TODO 完成后的代码，可直接编译运行；`finish` 模块保留官方参考实现作为对照。
 
 ### 2. 配置 JDK
 
@@ -326,6 +385,46 @@ repositories {
 - Android Studio 的 ML Model Binding 功能自动解析 `.tflite` 文件中的元数据
 - 生成 `FlowerModel.java` 包装类，暴露 `newInstance()` / `process()` / `Outputs` 等 API
 - 构建时任务：`generateDebugMlModelClass`
+
+---
+
+## 运行效果
+
+真机运行后，应用界面分为两层：
+
+```
+┌────────────────────────────┐
+│       PreviewView          │  ← 摄像头实时预览画面
+│       (全屏背景)            │
+│                            │
+├────────────────────────────┤
+│  ┌──────────────────────┐  │
+│  │ Daisy       87.3%    │  │  ← Top-1 识别结果
+│  ├──────────────────────┤  │
+│  │ Sunflower    9.2%    │  │  ← Top-2
+│  ├──────────────────────┤  │
+│  │ Rose         2.1%    │  │  ← Top-3
+│  └──────────────────────┘  │
+│       RecyclerView          │  ← 实时刷新，关闭动画防闪烁
+└────────────────────────────┘
+```
+
+**验证步骤**：
+
+1. 应用启动 → 允许摄像头权限 → 预览画面出现
+2. 将摄像头对准花卉图片或实物 → 底部识别结果实时变化
+3. **非** "Fake label" 随机数 → 说明 TFLite 模型推理正常
+4. Logcat 过滤 `TFL Classify` → 查看 GPU 兼容性日志（`GPU Compatible` 或 `GPU Incompatible`）
+
+**预期行为**：
+
+| 操作 | 预期结果 |
+|------|----------|
+| 对准花卉 | 显示真实花卉名 + 置信度，不断刷新 |
+| 对准非花卉物体 | 仍显示最接近的花卉类别，置信度较低 |
+| 转动手机 | 预览旋转正常，结果不丢失（ViewModel 存活） |
+| 切换其他 App 后返回 | 相机重新绑定，结果持续更新 |
+| 无摄像头权限 | Toast 提示后退出 |
 
 ---
 
