@@ -1,0 +1,14 @@
+# Large dataset files (excluded from Git)
+data/*.zip
+data/rps/
+data/rps-test-set/
+data/__pycache__/
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+# TensorFlow logs
+training_output.log
+# IDE
+.vscode/
+.idea/
